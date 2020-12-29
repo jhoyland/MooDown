@@ -11,14 +11,18 @@ MooDown was written in Python 3 and requires a standard Python installation. In 
 
 ## Features and limiatations
 
-MooDown can handle all the Moodle question types except, for the moment, _matching_. Partial credit answers and answer-specific feedback are possible. Question text can contain formatting through standard markdown syntax and embedded images and equations in LaTeX / MathJax format. At present LaTeX / MathJax has some limitations in multiple choice answers and images are not supported in multiple choice answer texts. Cloze format questions must be entered verbatam using the [Cloze format](https://tinyurl.com/y4rzv8xw "Cloze format specification").
+MooDown can handle all the Moodle question types except, for the moment, _matching_. Partial credit answers and answer-specific feedback are possible. Question text can contain formatting through standard markdown syntax and embedded images and equations in LaTeX / MathJax format. At present LaTeX / MathJax has some glitches in multiple choice answers and images are not supported in multiple choice answer texts. Cloze format questions must be entered verbatam using the [Cloze format](https://tinyurl.com/y4rzv8xw "Cloze format specification").
+MathJax sections must be escaped:
+'''
+\\( y = a x^2 + b x + c \\)
+'''
 At the moment _general feedback_, options related to multiple attempts like penalties etc are not implemented. Neither are quiz-level options such as category tags. Description "questions" are also not supported. MooDown prepares questions for loading into the question bank and these options are more for when you are designing the quiz itself.
 
 ## Usage
 
 To run MooDown from the command line run
 
-'''MooDown quizfile.md'''
+'''python MooDown.py quizfile.md'''
 
 The program will output the file '''quizfile.xml''' to the same directory. At the present this is a rough beta so there is little by the way of error checking or helpful messages - check your questions after import before opening them to students!
 
