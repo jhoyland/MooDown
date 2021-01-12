@@ -85,8 +85,9 @@ def getFeedback(txt):
 # Returns None if none found or tolerance was invalid (not convertable to float)    
 
 def getTolerance(txt):
-    
-    match = re.findall(r'[\{]([\w\s]+)[\}]',txt)
+     
+    match = re.findall(r'\{(.*?)\}',txt)
+
     
     if len(match) > 0:
         
@@ -218,7 +219,7 @@ for h1 in tree.iter('h1'):
             
             # Finish the question text by converting to CDATA            
             questionTextText.text = generateCDATA(qtextContents)
-            
+            # Create an empty div for the next question's text
             qtextContents = et.Element('div')            
             
             mode = 'answer'
@@ -350,11 +351,12 @@ for h1 in tree.iter('h1'):
                         feedbackText.text = fb
                         
                     if qtype == 'numerical':
+
                         tol = getTolerance(item.text)
                     
                         if tol:
-                                tolerance = et.SubElement(answer,'tolerance')
-                        tolerance.text = tol
+                            tolerance = et.SubElement(answer,'tolerance')
+                            tolerance.text = tol
                         
                     answercount = answercount + 1
                     
