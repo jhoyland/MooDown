@@ -202,14 +202,18 @@ for h1 in tree.iter('h1'):
     qtextContents = et.Element('div')
     
     for su in h1.itersiblings():
+
+        skipTag = False
         
-        if su.tag == 'h1':
+        if su.tag == 'h1': # Found another question - TO DO wrap up to determine is the previous question was valid
             
             break
         
         if su.tag == 'h2' and su.text.lower().startswith('cloze'):
             
-            qtype == 'cloze'
+            qtype = 'cloze'
+            question.set("type",qtype)
+            skipTag = True  # Needed to stop "cloze" being included as an actual header - this is not ideal
             
         
         # An H2 tag starting 'ans' (case insensitive) starts the answer section of the question
@@ -369,7 +373,8 @@ for h1 in tree.iter('h1'):
                 
         else:
             
-            qtextContents.append(su)
+            if not skipTag:
+                qtextContents.append(su)
         
         
         
