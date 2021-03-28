@@ -41,6 +41,29 @@ def wrapDiv(tx):
     
     return "<div>" + tx + "</div>" 
 
+
+def ElementWithText(name,text,textname='text',CDATA=True):
+
+    el = et.Element(name)
+
+    elText = et.SubElement(el,textname)
+
+    if CDATA:
+        elText.text = et.CDATA(text)
+    else:
+        elText.text = text
+
+    return el
+
+def SubElementWithText(parent,name,text,textname='text',CDATA=True):
+
+    el = ElementWithText(name,text,textname,CDATA)
+
+    parent.append(el)
+
+    return el
+
+
 # Extracts mark fraction from end of answer lines
 # Returns None if no fraction found.
 
@@ -119,7 +142,7 @@ def generateCDATA(qtextElement):
         
         # For jpegs and pngs, open the image file and base64 encode it, replacing the file link
         # With the encoded image in the HTML. Change tag atributes accordingly
-        if extension in "jpg png":
+        if extension in "jpeg jpg png":
         
             with open(src,'rb') as img_file:
                 
@@ -135,8 +158,8 @@ def generateCDATA(qtextElement):
                 
     # Convert the HTML back to a string and embed it in a CDATA section
     
-    return et.CDATA(et.tostring(qtextElement,pretty_print=True).decode('utf-8'))           
-        
+    return et.CDATA(et.tostring(qtextElement,pretty_print=True).decode('utf-8'))      
+
         
 # Parse arguments for input filename
 
