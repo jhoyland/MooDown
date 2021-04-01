@@ -41,6 +41,10 @@ def wrapDiv(tx):
     
     return "<div>" + tx + "</div>" 
 
+def wrapSpan(tx):
+    
+    return "<span>" + tx + "</span>"
+
 
 def ElementWithText(name,text,textname='text',CDATA=True):
 
@@ -111,7 +115,6 @@ def getTolerance(txt):
      
     match = re.findall(r'\{(.*?)\}',txt)
 
-    
     if len(match) > 0:
         
         try:
@@ -123,11 +126,138 @@ def getTolerance(txt):
     else:
         
         return None 
+
+# Parses the ordered and unordered lists as answers to numerical, multiple choice, true-false or short answer questions 
+
+def parseListAnswers(listElement):
+    
+    qtype = 'unknown'
+    fracset = False
+    
+    # List to store multiple answers 
+    
+    answers = []
+    
+    # Ordered list defaults to mc and unordered to numerical
+    
+    if listElement.tag == 'ol':
+        
+        qtype = 'multichoice'
+        
+    else:
+        
+        qtype = 'numerical'
+        
+    # Step through the list item elements - each one represents one answer
+    
+    for answer in listElement.iter('li'):
+        
+        atext = re.split('[\{"#]',answer.text)[0].strip()
+        
+        fb = getFeedback(answer.text)
+        
+        # if this s the first answer check to see if it is true / false
+        
+        if len(answers) == 0:
+            
+            firstWord = atext.split(None,1)[0].lower()
+            
+            if firstWord in 'truefalse':
+                
+                qtype = 'truefalse'
+                
+                # Create the true and false answers - this is really a special case of multichoice
+                
+                answers.append({'ans':firstWord,'tol':None,'fbk':fb,'frc':'100'})
+                answers.append({'ans':qtype.replace(firstWord,''),'tol':None,'fbk':None,'frc':'0'})
+                
+                fracset = True
+                
+                continue
+            
+        # If we've already established this is true false the second answer is only there to provide feedback for incorrect
+                
+        if qtype == 'truefalse':
+            
+            answers[1]['fbk']=fb
+             
+            break
+        
+        tolerance = None
+
+        # If this is a numercal question try to convert the answer to a number - if this fails the question switches to short answer
+
+        if qtype == 'numerical':
+
+            try:
+                a = float(atext)
+                tolerance = getTolerance(answer.text)
+            except ValueError:
+                qtype = 'shortanswer'
+                
+        # Get the score for this question. Set to zero if none found. 
+        
+        frac = getFraction(answer.text)
+        
+        if frac is not None:
+            
+            fracset = True
+            
+        else:
+            
+            frac = '0'
+            
+        # Append the answer to the list
+            
+        answers.append({'ans':atext,'tol':tolerance,'fbk':fb,'frc':frac})
+        
+    # If no fraction was specified for any answer, set the first answer to 100% correct
+        
+    if not fracset and len(answers)>0:
+        answers[0]['frc']=100
+        
+    return (answers,qtype)
+        
+
+# Generate an XML answer. Non-numerical answers need their answers wrapped in CDATA section
+
+def createAnswerXML(answer,isNumeric=True):
+
+    answerElement = ElementWithText('answer',answer['ans'],CDATA = not isNumeric)
+    answerElement.set('fraction',str(answer['frc']))
+
+    if 'tol' in answer:
+
+        if answer['tol'] is not None:
+
+            SubElementWithText(answerElement, 'tolerance', answer['tol'], CDATA = False)
+
+    if answer['fbk'] is not None:
+
+        SubElementWithText(answerElement,'feedback',answer['fbk'])
+
+    return answerElement
+
+# Generate a cloze format numeric answer 
+
+def createAnswerCloze(answer):
+    
+    answerString = "%{}%{}".format(answer['frc'],answer['ans'])
+
+    if answer['tol'] is not None:
+
+        answerString += ":{}".format(answer['tol'])
+
+    if answer['fbk'] is not None:
+
+        answerString += "#{}".format(answer['fbk'])
+
+    return answerString
     
 # Question text must be wrapped in CDATA tags. This function does that and also base64 converts
 # image tag contents. Yes, yes I know functions should just do one thing - I'll fix it later
     
-            
+             
 def generateCDATA(qtextElement):
 
     # Locate image tags in the XML
@@ -235,8 +365,10 @@ for h1 in tree.iter('h1'):
         if su.tag == 'h2' and su.text.lower().startswith('cloze'):
             
             qtype = 'cloze'
+            mode = 'cloze'
             question.set("type",qtype)
-            skipTag = True  # Needed to stop "cloze" being included as an actual header - this is not ideal
+            
+            continue
             
         
         # An H2 tag starting 'ans' (case insensitive) starts the answer section of the question
@@ -251,157 +383,52 @@ for h1 in tree.iter('h1'):
             
             mode = 'answer'
             
+            continue
+            
+            
         if mode == 'answer':
         
-            if su.tag == 'ol':
-                qtype = 'multichoice'
-                fracset = False 
-                answercount = 0
+            if su.tag in 'ol ul':
                 
-                # Step over the list items for the answers
-                
-                for item in su.iter('li'):
-                    
-                    # Get the raw answer text and grab the first word
-                    
-                    atext = re.split('["#]',item.text)[0]
-                    
-                    # Check for a True/False question
-                    
-                    if answercount == 0:
-                        
-                        firstWord = atext.split(None,1)[0].lower()
-                        
-                        if firstWord in 'truefalse':
-                            qtype = 'truefalse'
-                            
-                            # True/false will ignore further answers and fraction specifications
-                            # a second answer can be used to give feedback for the wrong answer
-                            
-                            answer1 = et.SubElement(question,'answer')  
-                            answer1Text = et.SubElement(answer1,'text')
-                            answer1Text.text = firstWord
-                            answer1.set('fraction','100')
-                            
-                            answer2 = et.SubElement(question,'answer')  
-                            answer2Text = et.SubElement(answer2,'text')
-                            answer2Text.text = qtype.replace(firstWord,'')
-                            answer2.set('fraction','0')
-                            
-                            answer = answer1
-                            
-                            fracset = True
-                        
-                    if answercount == 1 and qtype == 'truefalse':
-                        
-                        # Set current answer to the wrong answer for True / False to allow feedback
-                        
-                        answer = answer2
-                        
-                    if not qtype == 'truefalse':
-                        
-                        answer = et.SubElement(question,'answer')  
-                        answerText = et.SubElement(answer,'text')
-                        answerText.text = et.CDATA(atext)
-                        
-                        if answercount == 0:
-                            
-                            firstanswer = answer
-                            
-                        frac = getFraction(item.text)      
-                    
-                        if frac is not None:
-                            
-                            answer.set('fraction',str(frac))
-                            fracset = True
-                            
-                        else:
-                            
-                            answer.set('fraction','0')
-                               
-                    fb = getFeedback(item.text)
-                    
-                    
-                
-                    if fb:
-                        feedback = et.SubElement(answer,'feedback')
-                        feedbackText = et.SubElement(feedback,'text')
-                        feedbackText.text = fb
-                        
-                    answercount = answercount + 1
-                    
-                # First answer defaults to correct if no fractions assigned
-                    
-                if not fracset:
-                    
-                    firstanswer.set('fraction','100')
-                    
-                question.set("type",qtype)
-      
-                
-            if su.tag == 'ul':                
-                
-                fracset = False 
-                answercount = 0
-                
-                for item in su.iter('li'):
-                    
-                    answer = et.SubElement(question,'answer')     
-                    
-                    if answercount == 0:
-                        
-                        firstanswer = answer
-                    
-                    answerText = et.SubElement(answer,'text')
-                    atext = re.split('[\{"#]',item.text)[0]
-                    
-                    answerText.text = atext
-                    
-                    try:
-                        a = float(atext)
-                        qtype = 'numerical'
-                    except ValueError:
-                        qtype = 'shortanswer'
-                    
-                    
-                    frac = getFraction(item.text)   
-                    
-                    if frac is not None:
-                        answer.set('fraction',str(frac))     
-                        fracset = True
-                    
-                    fb = getFeedback(item.text)
-                
-                    if fb:
-                        feedback = et.SubElement(answer,'feedback')
-                        feedbackText = et.SubElement(feedback,'text')
-                        feedbackText.text = fb
-                        
-                    if qtype == 'numerical':
-
-                        tol = getTolerance(item.text)
-                    
-                        if tol:
-                            tolerance = et.SubElement(answer,'tolerance')
-                            tolerance.text = tol
-                        
-                    answercount = answercount + 1
-                    
-                                    
-                if not fracset:
-                    
-                    firstanswer.set('fraction','100')
-                    
+                answers,qtype = parseListAnswers(su)
                 question.set("type",qtype)
                 
-        else:
+                for answer in answers:
+                    
+                    answerXML = createAnswerXML(answer,qtype=='numerical')
+                    question.append(answerXML)
+                    
+                continue
+                     
+        if mode == 'cloze':
             
-            if not skipTag:
-                qtextContents.append(su)
+            if su.tag in 'ol ul':
+                
+                answers,qtype = parseListAnswers(su)
+                clzqtext ="{{1:{}:".format(qtype.upper())
+                first = True
+                 
+                for answer in answers:
+                    
+                    if first:
+                        first = False
+                    else:
+                        clzqtext = clzqtext + '~'
+                        
+                    answerStr = createAnswerCloze(answer)
+                    clzqtext = clzqtext + answerStr
+                    
+                clzqtext = clzqtext + '}'
+                
+                clzqel = et.Element('span')
+                clzqel.text = clzqtext
+                qtextContents.append(clzqel)
+                
+                continue                
+                    
+        qtextContents.append(su)
         
-        
-        
-    if not mode=='answer':
+    if not mode=='answer':  # No answer section was found
         
         questionTextText.text = generateCDATA(qtextContents)    
         # TO DO: Check for Cloze        

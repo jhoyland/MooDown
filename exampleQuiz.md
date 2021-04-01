@@ -47,4 +47,21 @@ What type of flow occurs for systems with very high Reynold's numbers.
 
 * Turbulent 
 
+# A cloze Question
+
+## Cloze
+
+This is a cloze question let's see if it works
+
+1. Multiple
+2. Choice
+3. Question
+
+And also a numeric question. How many kittens are there?
+
+* 5 {2} "Correct" #100
+* 12 {4} "So close but no"
+
+There we go
+
 
