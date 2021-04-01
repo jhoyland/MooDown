@@ -43,7 +43,7 @@ Next you can put the text of the question in standard markdown format.
 Why did James Hoyland create *MooDown*?
 ~~~
 
-Question text can contain any standard markdown formatting for emphesis, lists etc. I cannot contain level 1 headings as this starts a new question. It can contain level 2 headings as long as they don't begin with the letters _ANS_ or _CLOZE_ as they have special meaning.
+Question text can contain any standard markdown formatting for emphesis, lists etc. It cannot contain level 1 headings as this starts a new question. It can contain level 2 headings as long as they don't begin with the letters _ANS_ or _CLOZE_ as they have special meaning.
 
 The answer section is started by a second level header, the text of which must begin with _ANS_ (not case sensitive)
 
@@ -73,10 +73,9 @@ If you want another answer to be correct you can specify by using the \# symbol 
 4. For giggles
 ~~~
 
-In the example above example answer 2 is correct and answer 3 is partially correct. Moodle requires at least one answer be 100% correct. Setting a fraction for any answer overrides the first answer correct default so you will have to manually put in #100 for the first answer if you want it correct. Instead of writing #100 you can use #* as a shortcut.
+In the example above answer 2 is correct and answer 3 is partially correct. Moodle requires at least one answer be 100% correct. Setting a fraction for any answer overrides the first answer correct default so you will have to manually put in #100 for the first answer if you want it correct. Instead of writing #100 you can use #* as a shortcut.
 
 Only single selection multi-choice is supported at the moment.
-
 
 Feedback can be added for individual answers using text in double quotes after the answer.
 
@@ -190,6 +189,7 @@ What word or phrase comes to mind when thinking of MooDown?
 * Wonderful
 ~~~
 
+If any answer is non-numerical the whole question will be interpreted as short answer even if some answers are numerical.
 Again feedback and partial credit answers can be given. For short answer questions it can be useful to have more than one correct answer to allow for small variations in students correct answers.
 
 
@@ -214,7 +214,8 @@ Cloze questions use a special format to embed questions within a body of text. T
 ## cloze
 ~~~
 
-This is not case sensitive. There is no answer section in a cloze question and a second level header matching an answer section will just be formatted as part of the question text if you use it.
+This is not case sensitive. There is no answer section in a cloze question and a second level header matching an answer section will just be formatted as part of the question text if you use it. When the question type is cloze you can use bulleted and numbered lists in the same way as above to put questions inside the body of the question text. Multichoice will appear as a drop-down and numerical / short answer as an edit box. **It is important to leave a blank line above and below lists in the questions or they will not be interpreted as questions** Note at due to this answer boxes will appear on separate lines in the text. At present it is not possible to include answers for example within a line of text except by entering it directly in the cloze format. If you enter cloze format answers in the text they will be end up in the final question and moodle will parse them directly.
+At present there is no way to weight the individual questions within a cloze question.
 
 ### Essay question
 
@@ -229,5 +230,4 @@ Write an essay on the wonders of MooDown. Make specific reference to its many po
 
 ## Internals
 
-MooDown reads in the source which if you've followed the guide above will be a standard well-formed markdown document. Python parses the markdown into a flat HTML document which is then post-processed by searching for level 1 headers and then interpreting the contents. Question text (before the answer section) is essentially kept in the HTML format as parsed. However, img tags are scanned and images opened and embedded in the question text as base-64 encoded data (currently only PNG and JPG are supported). In future SVG will be embedded directly. Question text section is wrapped in CDATA tags. This is essential for correct import when the question text contains HTML.
-Feedback and answers are not processed into CDATA tags at present and so cannot contain more complex HTML thought they seem to cope with simple emphesis etc.
+MooDown reads in the source which if you've followed the guide above will be a standard well-formed markdown document. Python parses the markdown into a flat HTML document which is then post-processed by searching for level 1 headers and then interpreting the contents. Question text (before the answer section) is essentially kept in the HTML format as parsed. However, img tags are scanned and images opened and embedded in the question text as base-64 encoded data (currently only PNG and JPG are supported). In future SVG will be embedded directly. Question text section, feedback and multichoice answers are wrapped in CDATA tags. This is essential for correct import when the question text contains HTML.
